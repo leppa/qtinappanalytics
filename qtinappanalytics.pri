@@ -34,6 +34,8 @@ contains(QT, systeminfo) {
     contains(CONFIG, mobility): DEFINES += QAMPLITUDEANALYTICS_USE_QTMOBILITY
 }
 
+blackberry: LIBS += -lbbplatform -lbbdevice
+
 INCLUDEPATH += \
     $$PWD/includes
 

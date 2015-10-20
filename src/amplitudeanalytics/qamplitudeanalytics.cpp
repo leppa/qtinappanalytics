@@ -48,6 +48,10 @@
 #   include <QSystemInfo>
 #   include <QSystemDeviceInfo>
 #   include <QSystemNetworkInfo>
+#elif defined(Q_OS_BLACKBERRY)
+#   include <bb/device/CellularNetworkInfo>
+#   include <bb/device/HardwareInfo>
+#   include <bb/platform/PlatformInfo>
 #endif
 
 namespace {
@@ -171,6 +175,27 @@ QAmplitudeAnalytics::QAmplitudeAnalytics(const QString &apiKey, QSettings *setti
     }
     if (m_carrier.isEmpty())
         m_carrier = findCarrierByMccMnc(sni.homeMobileCountryCode(), sni.homeMobileNetworkCode());
+#elif defined(Q_OS_BLACKBERRY)
+    m_os.name = QLatin1String("BlackBerry 10");
+
+    bb::platform::PlatformInfo pi;
+    m_os.version = pi.osVersion();
+
+//    m_device.brand = QLatin1String("BlackBerry");
+    m_device.manufacturer = QLatin1String("BlackBerry");
+    bb::device::HardwareInfo hwi;
+    m_device.model = hwi.modelName();
+    if (m_device.model.isEmpty())
+        m_device.model = hwi.deviceName();
+
+    bb::device::CellularNetworkInfo cni;
+    if (!cni.displayName().isEmpty())
+        m_carrier = cni.displayName();
+    else if (!cni.name().isEmpty())
+        m_carrier = cni.name();
+    else
+        m_carrier = findCarrierByMccMnc(cni.mobileCountryCode(), cni.mobileNetworkCode());
+    m_country = findCountryByMcc(cni.mobileCountryCode());
 #endif
 
     if (m_device.id.isEmpty()) {
