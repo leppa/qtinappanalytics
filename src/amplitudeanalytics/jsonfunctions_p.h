@@ -33,7 +33,7 @@
 #include <QDate>
 #include <QVariant>
 
-inline QString toJson(const QVariantMap &map);
+inline QString toJsonString(const QVariant &value);
 
 inline void capitalize(QString &str)
 {
@@ -55,6 +55,22 @@ inline QString quoteAndEscape(const QString &string)
     result.replace('\r', "\\r");
     result.replace('\t', "\\t");
     return result.prepend("\"").append("\"");
+}
+
+inline QString toJson(const QVariantHash &hash)
+{
+    QStringList json;
+    for (QVariantHash::const_iterator i = hash.constBegin(); i != hash.constEnd(); ++i)
+        json.append(QString("%1:%2").arg(quoteAndEscape(i.key()), toJsonString(i.value())));
+    return json.join(",").prepend("{").append("}");
+}
+
+inline QString toJson(const QVariantMap &map)
+{
+    QStringList json;
+    for (QVariantMap::const_iterator i = map.constBegin(); i != map.constEnd(); ++i)
+        json.append(QString("%1:%2").arg(quoteAndEscape(i.key()), toJsonString(i.value())));
+    return json.join(",").prepend("{").append("}");
 }
 
 inline QString toJsonString(const QVariant &value)
@@ -82,6 +98,8 @@ inline QString toJsonString(const QVariant &value)
         return quoteAndEscape(QLocale::languageToString(value.toLocale().language()));
     case QVariant::Map:
         return toJson(value.toMap());
+    case QVariant::Hash:
+        return toJson(value.toHash());
     case QVariant::List:
     {
         QStringList values;
@@ -97,12 +115,21 @@ inline QString toJsonString(const QVariant &value)
     return QString();
 }
 
-inline QString toJson(const QVariantMap &map)
+inline QString doubleToString(const QVariant &value, int precision)
 {
-    QStringList json;
-    for (QVariantMap::const_iterator i = map.constBegin(); i != map.constEnd(); ++i)
-        json.append(QString("%1:%2").arg(quoteAndEscape(i.key()), toJsonString(i.value())));
-    return json.join(",").prepend("{").append("}");
+    switch (value.type()) {
+    case QVariant::Int:
+    case QVariant::UInt:
+    case QVariant::LongLong:
+    case QVariant::String:
+        return value.toString();
+    case QVariant::Double:
+        return QString::number(value.toDouble(), 'g', precision);
+    default:
+        // Not a number: ignore
+        qWarning() << value << "is not a number.";
+        return "0";
+    }
 }
 
 #endif // JSONFUNCTIONS_P_H

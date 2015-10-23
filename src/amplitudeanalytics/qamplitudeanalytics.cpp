@@ -83,32 +83,34 @@ QAmplitudeAnalytics::QAmplitudeAnalytics(const QString &apiKey, QSettings *setti
     m_sslConfiguration.setProtocol(QSsl::TlsV1);
 #endif
 
+    m_appVersion = QCoreApplication::applicationVersion();
+
 #ifdef Q_OS_LINUX
-    m_os.platform = QLatin1String("Linux");
+    m_device.os.platform = QLatin1String("Linux");
 #elif defined(Q_OS_WIN)
 # ifdef Q_OS_WIN32
-    m_os.platform = QLatin1String("Win32");
+    m_device.os.platform = QLatin1String("Win32");
 # elif defined(Q_OS_WINCE)
-    m_os.platform = QLatin1String("WinCE");
+    m_device.os.platform = QLatin1String("WinCE");
 # elif defined(Q_OS_WINRT)
-    m_os.platform = QLatin1String("WinRT");
+    m_device.os.platform = QLatin1String("WinRT");
 # endif
 #elif defined(Q_OS_SYMBIAN)
-    m_os.platform = QLatin1String("Symbian");
-    m_os.name = QLatin1String("S60");
+    m_device.os.platform = QLatin1String("Symbian");
+    m_device.os.name = QLatin1String("S60");
 #elif defined(Q_OS_QNX)
-    m_os.platform = QLatin1String("QNX");
+    m_device.os.platform = QLatin1String("QNX");
 #endif
 
 #ifdef MEEGO_EDITION_HARMATTAN
-    m_os.name = QLatin1String("Meego");
+    m_device.os.name = QLatin1String("Meego");
 #endif
 
 #ifdef QAMPLITUDEANALYTICS_USE_QTSYSTEMINFO
     QDeviceInfo di;
 
-    m_os.name = di.operatingSystemName();
-    m_os.version = di.version(QDeviceInfo::Os);
+    m_device.os.name = di.operatingSystemName();
+    m_device.os.version = di.version(QDeviceInfo::Os);
 
     m_device.id = di.uniqueDeviceID();
     m_device.manufacturer = di.manufacturer();
@@ -117,7 +119,7 @@ QAmplitudeAnalytics::QAmplitudeAnalytics(const QString &apiKey, QSettings *setti
         m_device.model = di.productName();
 
     QNetworkInfo ni;
-    m_country = findCountryByMcc(ni.homeMobileCountryCode(0));
+    m_location.country = findCountryByMcc(ni.homeMobileCountryCode(0));
 
     QVector<QNetworkInfo::NetworkMode> modes;
     modes << QNetworkInfo::GsmMode
@@ -129,18 +131,18 @@ QAmplitudeAnalytics::QAmplitudeAnalytics(const QString &apiKey, QSettings *setti
     foreach (QNetworkInfo::NetworkMode mode, modes) {
         const int count = ni.networkInterfaceCount(mode);
         for (int interface = 0; interface < count; ++interface) {
-            m_carrier = ni.networkName(mode, interface);
-            if (!m_carrier.isEmpty())
+            m_device.carrier = ni.networkName(mode, interface);
+            if (!m_device.carrier.isEmpty())
                 break;
         }
-        if (!m_carrier.isEmpty())
+        if (!m_device.carrier.isEmpty())
             break;
     }
-    if (m_carrier.isEmpty())
-        m_carrier = findCarrierByMccMnc(ni.homeMobileCountryCode(0), ni.homeMobileNetworkCode(0));
+    if (m_device.carrier.isEmpty())
+        m_device.carrier = findCarrierByMccMnc(ni.homeMobileCountryCode(0), ni.homeMobileNetworkCode(0));
 #elif defined(QAMPLITUDEANALYTICS_USE_QTMOBILITY)
     QtMobility::QSystemInfo si;
-    m_os.version = si.version(QtMobility::QSystemInfo::Os);
+    m_device.os.version = si.version(QtMobility::QSystemInfo::Os);
 
     QtMobility::QSystemDeviceInfo sdi;
     m_device.id = sdi.uniqueDeviceID();
@@ -151,9 +153,9 @@ QAmplitudeAnalytics::QAmplitudeAnalytics(const QString &apiKey, QSettings *setti
     m_language = QLocale::languageToString(loc.language());
 
     QtMobility::QSystemNetworkInfo sni;
-    m_country = findCountryByMcc(sni.homeMobileCountryCode());
-    if (m_country.isEmpty())
-        m_country = findCountryByIso3166(si.currentCountryCode());
+    m_location.country = findCountryByMcc(sni.homeMobileCountryCode());
+    if (m_location.country.isEmpty())
+        m_location.country = findCountryByIso3166(si.currentCountryCode());
 
     QVector<QtMobility::QSystemNetworkInfo::NetworkMode> modes;
     modes << QtMobility::QSystemNetworkInfo::GsmMode
@@ -162,17 +164,17 @@ QAmplitudeAnalytics::QAmplitudeAnalytics(const QString &apiKey, QSettings *setti
           << QtMobility::QSystemNetworkInfo::WimaxMode
           << QtMobility::QSystemNetworkInfo::LteMode;
     foreach (QtMobility::QSystemNetworkInfo::NetworkMode mode, modes) {
-        m_carrier = QtMobility::QSystemNetworkInfo::networkName(mode);
-        if (!m_carrier.isEmpty())
+        m_device.carrier = QtMobility::QSystemNetworkInfo::networkName(mode);
+        if (!m_device.carrier.isEmpty())
             break;
     }
-    if (m_carrier.isEmpty())
-        m_carrier = findCarrierByMccMnc(sni.homeMobileCountryCode(), sni.homeMobileNetworkCode());
+    if (m_device.carrier.isEmpty())
+        m_device.carrier = findCarrierByMccMnc(sni.homeMobileCountryCode(), sni.homeMobileNetworkCode());
 #elif defined(Q_OS_BLACKBERRY)
-    m_os.name = QLatin1String("BlackBerry 10");
+    m_device.os.name = QLatin1String("BlackBerry 10");
 
     bb::platform::PlatformInfo pi;
-    m_os.version = pi.osVersion();
+    m_device.os.version = pi.osVersion();
 
 //    m_device.brand = QLatin1String("BlackBerry");
     m_device.manufacturer = QLatin1String("BlackBerry");
@@ -183,12 +185,12 @@ QAmplitudeAnalytics::QAmplitudeAnalytics(const QString &apiKey, QSettings *setti
 
     bb::device::CellularNetworkInfo cni;
     if (!cni.displayName().isEmpty())
-        m_carrier = cni.displayName();
+        m_device.carrier = cni.displayName();
     else if (!cni.name().isEmpty())
-        m_carrier = cni.name();
+        m_device.carrier = cni.name();
     else
-        m_carrier = findCarrierByMccMnc(cni.mobileCountryCode(), cni.mobileNetworkCode());
-    m_country = findCountryByMcc(cni.mobileCountryCode());
+        m_device.carrier = findCarrierByMccMnc(cni.mobileCountryCode(), cni.mobileNetworkCode());
+    m_location.country = findCountryByMcc(cni.mobileCountryCode());
 #endif
 
     if (m_device.id.isEmpty()) {
@@ -206,10 +208,10 @@ QAmplitudeAnalytics::QAmplitudeAnalytics(const QString &apiKey, QSettings *setti
         m_language = QLocale::languageToString(sysloc.language());
     capitalize(m_language);
 
-    if (m_country.isEmpty() && sysloc.country() != QLocale::AnyCountry) {
+    if (m_location.country.isEmpty() && sysloc.country() != QLocale::AnyCountry) {
         const QStringList lang = sysloc.name().split("_");
         if (lang.count() > 1) {
-            m_country = findCountryByIso3166(lang.at(1));
+            m_location.country = findCountryByIso3166(lang.at(1));
         }
     }
 
@@ -223,6 +225,104 @@ QAmplitudeAnalytics::QAmplitudeAnalytics(const QString &apiKey, QSettings *setti
     connect(m_nam, SIGNAL(finished(QNetworkReply*)), this, SLOT(onNetworkReply(QNetworkReply*)));
 }
 
+QString QAmplitudeAnalytics::apiKey() const
+{
+    return m_apiKey;
+}
+
+void QAmplitudeAnalytics::setApiKey(const QString &apiKey)
+{
+    if (m_apiKey == apiKey)
+        return;
+
+    m_apiKey = apiKey;
+    emit apiKeyChanged();
+}
+
+QString QAmplitudeAnalytics::appVersion() const
+{
+    return m_appVersion;
+}
+
+void QAmplitudeAnalytics::setAppVersion(const QString &version)
+{
+    if (m_appVersion == version)
+        return;
+
+    m_appVersion = version;
+    emit appVersionChanged();
+}
+
+QString QAmplitudeAnalytics::userId() const
+{
+    return m_userId;
+}
+
+void QAmplitudeAnalytics::setUserId(const QString &id)
+{
+    if (m_userId == id)
+        return;
+
+    m_userId = id;
+    emit userId();
+}
+
+QVariantMap QAmplitudeAnalytics::persistentUserProperties() const
+{
+    return m_userProperties;
+}
+
+void QAmplitudeAnalytics::setPersistentUserProperties(const QVariantMap &properties)
+{
+    if (m_userProperties == properties)
+        return;
+
+    m_userProperties = properties;
+    emit persistentUserPropertiesChanged();
+}
+
+QAmplitudeAnalytics::DeviceInfo QAmplitudeAnalytics::deviceInfo() const
+{
+    return m_device;
+}
+
+void QAmplitudeAnalytics::setDeviceInfo(const DeviceInfo &info)
+{
+    if (m_device == info)
+        return;
+
+    m_device = info;
+    emit deviceInfoChanged();
+}
+
+QAmplitudeAnalytics::LocationInfo QAmplitudeAnalytics::locationInfo() const
+{
+    return m_location;
+}
+
+void QAmplitudeAnalytics::setLocationInfo(const LocationInfo &info)
+{
+    if (m_location == info)
+        return;
+
+    m_location = info;
+    emit locationInfoChanged();
+}
+
+QString QAmplitudeAnalytics::language() const
+{
+    return m_language;
+}
+
+void QAmplitudeAnalytics::setLanguage(const QString &language)
+{
+    if (m_language == language)
+        return;
+
+    m_language = language;
+    emit languageChanged();
+}
+
 QAmplitudeAnalytics::~QAmplitudeAnalytics()
 {
     if (m_reply) {
@@ -234,36 +334,69 @@ QAmplitudeAnalytics::~QAmplitudeAnalytics()
 }
 
 void QAmplitudeAnalytics::trackEvent(const QString &eventType,
-                                    const QVariantMap &eventProperties,
-//                                    const QVariantMap &userProperties,
-                                    bool delay)
+                                     const QVariantMap &eventProperties,
+                                     bool postpone)
 {
-    QVariantMap event;
-    event.insert("device_id", m_device.id);
+    trackEvent(eventType, eventProperties, QVariantMap(), QVariant(), postpone);
+}
+
+void QAmplitudeAnalytics::trackEvent(const QString &eventType,
+                                     const QVariantMap &eventProperties,
+                                     const QVariantMap &userProperties,
+                                     const QVariant &revenue,
+                                     bool postpone)
+{
+    QVariantHash event;
+    if (!m_userId.isEmpty())
+        event.insert("user_id", m_userId);
+    if (!m_device.id.isEmpty())
+        event.insert("device_id", m_device.id);
     event.insert("event_type", eventType);
     event.insert("time", QDateTime::currentDateTimeUtc().toMSecsSinceEpoch());
     event.insert("event_properties", eventProperties);
-//    event.insert("user_properties", userProperties);
 
-    event.insert("app_version", QCoreApplication::applicationVersion());
-    if (!m_os.platform.isEmpty())
-        event.insert("platform", m_os.platform);
-    if (!m_os.name.isEmpty())
-        event.insert("os_name", m_os.name);
-    if (!m_os.version.isEmpty())
-        event.insert("os_version", m_os.version);
+    if (!userProperties.isEmpty())
+        event.insert("user_properties", userProperties);
+    else if (!m_userProperties.isEmpty())
+        event.insert("user_properties", m_userProperties);
+
+    if (!m_appVersion.isEmpty())
+        event.insert("app_version", m_appVersion);
+    if (!m_device.os.platform.isEmpty())
+        event.insert("platform", m_device.os.platform);
+    if (!m_device.os.name.isEmpty())
+        event.insert("os_name", m_device.os.name);
+    if (!m_device.os.version.isEmpty())
+        event.insert("os_version", m_device.os.version);
     if (!m_device.brand.isEmpty())
         event.insert("device_brand", m_device.brand);
     if (!m_device.manufacturer.isEmpty())
         event.insert("device_manufacturer", m_device.manufacturer);
     if (!m_device.model.isEmpty())
         event.insert("device_model", m_device.model);
-    if (!m_carrier.isEmpty())
-        event.insert("carrier", m_carrier);
-    if (!m_country.isEmpty())
-        event.insert("country", m_country);
-    event.insert("language", m_language);
-//    event.insert("revenue", "");
+    if (!m_device.carrier.isEmpty())
+        event.insert("carrier", m_device.carrier);
+    if (!m_location.country.isEmpty())
+        event.insert("country", m_location.country);
+    if (!m_location.region.isEmpty())
+        event.insert("region", m_location.region);
+    if (!m_location.city.isEmpty())
+        event.insert("city", m_location.city);
+    if (!m_location.dma.isEmpty())
+        event.insert("dma", m_location.dma);
+    if (m_location.latitude.isValid()) {
+        event.insert("location_lat", doubleToString(m_location.latitude, 15));
+    }
+    if (m_location.longitude.isValid()) {
+        event.insert("location_lng", doubleToString(m_location.longitude, 15));
+    }
+    if (!m_location.ip.isEmpty())
+        event.insert("ip", m_location.ip);
+    if (!m_language.isEmpty())
+        event.insert("language", m_language);
+    if (revenue.isValid()) {
+        event.insert("revenue", doubleToString(revenue, 2));
+    }
 
     event.insert("event_id", ++m_lastEventId);
     event.insert("session_id", m_sessionId);
@@ -274,7 +407,7 @@ void QAmplitudeAnalytics::trackEvent(const QString &eventType,
     m_queue.append(toJson(event));
     saveToSettings();
 
-    if (m_reply || delay) {
+    if (m_reply || postpone) {
         return;
     }
 
