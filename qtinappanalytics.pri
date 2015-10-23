@@ -2,7 +2,7 @@
 #
 #  Qt In-App Analytics
 #
-#  Copyright (c) 2015, Oleksii Serdiuk
+#  Copyright (c) 2015, Oleksii Serdiuk <contacts[at]oleksii[dot]name>
 #  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
@@ -40,7 +40,9 @@ INCLUDEPATH += \
     $$PWD/includes
 
 HEADERS += \
-    $$PWD/src/amplitudeanalytics/qamplitudeanalytics.h
+    $$PWD/src/amplitudeanalytics/qamplitudeanalytics.h \
+    $$PWD/src/amplitudeanalytics/jsonfunctions_p.h \
+    $$PWD/src/amplitudeanalytics/mccmncfunctions_p.h
 
 SOURCES += \
     $$PWD/src/amplitudeanalytics/qamplitudeanalytics.cpp

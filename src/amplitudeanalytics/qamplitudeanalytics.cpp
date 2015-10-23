@@ -1,7 +1,7 @@
 /*
  *  Qt In-App Analytics
  *
- *  Copyright (c) 2015, Oleksii Serdiuk
+ *  Copyright (c) 2015, Oleksii Serdiuk <contacts[at]oleksii[dot]name>
  *  All rights reserved.
  *
  *  Redistribution and use in source and binary forms, with or without
@@ -28,6 +28,9 @@
 
 #include "qamplitudeanalytics.h"
 
+#include "jsonfunctions_p.h"
+#include "mccmncfunctions_p.h"
+
 #include <QFile>
 #include <QDateTime>
 #include <QUuid>
@@ -53,16 +56,6 @@
 #   include <bb/device/HardwareInfo>
 #   include <bb/platform/PlatformInfo>
 #endif
-
-namespace {
-    inline void capitalize(QString &str);
-    inline QString quoteAndEscape(const QString &string);
-    inline QString toJsonString(const QVariant &value);
-    inline QString toJson(const QVariantMap &map);
-    inline QString findCountryByIso3166(const QString &iso);
-    inline QString findCountryByMcc(const QString &mcc);
-    inline QString findCarrierByMccMnc(const QString &mcc, const QString &mnc);
-}
 
 QAmplitudeAnalytics::QAmplitudeAnalytics(const QString &apiKey, QSettings *settings, QObject *parent)
     : QObject(parent)
@@ -343,136 +336,5 @@ void QAmplitudeAnalytics::saveToSettings()
         m_settings->endArray();
     } else {
         m_settings->remove("Analytics/Amplitude");
-    }
-}
-
-namespace {
-    inline void capitalize(QString &str)
-    {
-        if (str.isEmpty())
-            return;
-
-        str[0] = str.at(0).toUpper();
-    }
-
-    inline QString quoteAndEscape(const QString &string)
-    {
-        QString result(string);
-        // JSON requires \, ", \b, \f, \n, \r, \t to be escaped
-        result.replace('\\', "\\\\");
-        result.replace('"', "\\\"");
-        result.replace('\b', "\\b");
-        result.replace('\f', "\\f");
-        result.replace('\n', "\\n");
-        result.replace('\r', "\\r");
-        result.replace('\t', "\\t");
-        return result.prepend("\"").append("\"");
-    }
-
-    inline QString toJsonString(const QVariant &value)
-    {
-        switch (value.type()) {
-        case QVariant::Int:
-        case QVariant::UInt:
-        case QVariant::LongLong:
-        case QVariant::Double:
-        case QVariant::Bool:
-            return value.toString();
-            break;
-        case QVariant::String:
-        case QVariant::Char:
-        case QVariant::Url:
-            return quoteAndEscape(value.toString());
-        case QVariant::Date:
-            return quoteAndEscape(value.toDate().toString(Qt::ISODate));
-        case QVariant::Time:
-            return quoteAndEscape(value.toTime().toString(Qt::ISODate));
-        case QVariant::DateTime:
-            // Not using Qt::ISODate because we also want to save microseconds
-            return quoteAndEscape(value.toDateTime().toUTC().toString("yyyy-MM-ddTHH:mm:ss.zzzZ"));
-        case QVariant::Locale:
-            return quoteAndEscape(QLocale::languageToString(value.toLocale().language()));
-        case QVariant::Map:
-            return toJson(value.toMap());
-        case QVariant::List:
-        {
-            QStringList values;
-            foreach (const QVariant &item, value.toList()) {
-                values.append(toJsonString(item));
-            }
-            return values.join(",").prepend("[").append("]");
-        }
-        default:
-            // unsupported type -> return empty string
-            return QString();
-        }
-        return QString();
-    }
-
-    inline QString toJson(const QVariantMap &map)
-    {
-        QStringList json;
-        for (QVariantMap::const_iterator i = map.constBegin(); i != map.constEnd(); ++i)
-            json.append(QString("%1:%2").arg(quoteAndEscape(i.key()), toJsonString(i.value())));
-        return json.join(",").prepend("{").append("}");
-    }
-
-    inline QString findCountryByIso3166(const QString &iso)
-    {
-        if (iso.isEmpty())
-            return QString();
-
-        QFile f;
-        f.setFileName(":/qtamplitudeanalytics/csv/iso3166-country-codes.csv");
-        if (!f.open(QFile::Text | QFile::ReadOnly))
-            return QString();
-
-        const QString cc = iso.toUpper();
-        while (!f.atEnd()) {
-            QStringList row = QString::fromUtf8(f.readLine()).split(',');
-            if (row.at(0) == cc)
-                return row.at(1).trimmed();
-        }
-
-        return QString();
-    }
-
-    inline QString findCountryByMcc(const QString &mcc)
-    {
-        if (mcc.isEmpty())
-            return QString();
-
-        QFile f;
-        f.setFileName(":/qtamplitudeanalytics/csv/mcc-mnc-codes.csv");
-        if (!f.open(QFile::Text | QFile::ReadOnly))
-            return QString();
-
-        while (!f.atEnd()) {
-            QStringList row = QString::fromLatin1(f.readLine()).split(',');
-            if (row.at(0) == mcc) {
-                return row.at(5).trimmed();
-            }
-        }
-
-        return QString();
-    }
-
-    inline QString findCarrierByMccMnc(const QString &mcc, const QString &mnc)
-    {
-        if (mcc.isEmpty() || mnc.isEmpty())
-            return QString();
-
-        QFile f;
-        f.setFileName("://mcc-mnc-codes.csv");
-        if (!f.open(QFile::Text | QFile::ReadOnly))
-            return QString();
-        while (!f.atEnd()) {
-            QStringList row = QString::fromLatin1(f.readLine()).split(',');
-            if (row.at(0) == mcc && row.at(2) == mnc) {
-                return row.at(7).trimmed();
-            }
-        }
-
-        return QString();
     }
 }
