@@ -108,6 +108,14 @@ inline QString toJsonString(const QVariant &value)
         }
         return values.join(",").prepend("[").append("]");
     }
+    case QVariant::StringList:
+    {
+        QStringList values;
+        foreach (const QVariant &item, value.toStringList()) {
+            values.append(toJsonString(item));
+        }
+        return values.join(",").prepend("[").append("]");
+    }
     default:
         // unsupported type -> return empty string
         return QString();
