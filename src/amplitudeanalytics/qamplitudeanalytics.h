@@ -54,6 +54,10 @@ class QAmplitudeAnalytics: public QObject
                                          NOTIFY locationInfoChanged)
     Q_PROPERTY(QString language READ language WRITE setLanguage NOTIFY languageChanged)
 
+    Q_PROPERTY(bool privacyEnabled READ isPrivacyEnabled
+                                   WRITE setPrivacyEnabled
+                                   NOTIFY privacyEnabledChanged)
+
 public:
 
     struct DeviceInfo {
@@ -102,6 +106,9 @@ public:
     QString language() const;
     void setLanguage(const QString &language);
 
+    bool isPrivacyEnabled() const;
+    void setPrivacyEnabled(bool enabled);
+
     ~QAmplitudeAnalytics();
 
 signals:
@@ -112,6 +119,7 @@ signals:
     void deviceInfoChanged();
     void locationInfoChanged();
     void languageChanged();
+    void privacyEnabledChanged();
 
 public slots:
     void trackEvent(const QString &eventType,
@@ -141,6 +149,8 @@ private:
     DeviceInfo m_device;
     LocationInfo m_location;
     QString m_language;
+
+    bool m_privacyEnabled;
 
     qint64 m_sessionId;
     quint32 m_lastEventId;

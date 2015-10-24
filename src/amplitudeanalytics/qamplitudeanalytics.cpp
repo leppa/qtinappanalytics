@@ -60,6 +60,7 @@
 QAmplitudeAnalytics::QAmplitudeAnalytics(const QString &apiKey, QSettings *settings, QObject *parent)
     : QObject(parent)
     , m_apiKey(apiKey)
+    , m_privacyEnabled(false)
     , m_sessionId(QDateTime::currentDateTimeUtc().toMSecsSinceEpoch())
     , m_lastEventId(0)
     , m_shouldSend(false)
@@ -324,6 +325,20 @@ void QAmplitudeAnalytics::setLanguage(const QString &language)
     emit languageChanged();
 }
 
+bool QAmplitudeAnalytics::isPrivacyEnabled() const
+{
+    return m_privacyEnabled;
+}
+
+void QAmplitudeAnalytics::setPrivacyEnabled(bool enabled)
+{
+    if (m_privacyEnabled == enabled)
+        return;
+
+    m_privacyEnabled = enabled;
+    emit privacyEnabledChanged();
+}
+
 QAmplitudeAnalytics::~QAmplitudeAnalytics()
 {
     if (m_reply) {
@@ -375,26 +390,28 @@ void QAmplitudeAnalytics::trackEvent(const QString &eventType,
         event.insert("device_manufacturer", m_device.manufacturer);
     if (!m_device.model.isEmpty())
         event.insert("device_model", m_device.model);
-    if (!m_device.carrier.isEmpty())
-        event.insert("carrier", m_device.carrier);
-    if (!m_location.country.isEmpty())
-        event.insert("country", m_location.country);
-    if (!m_location.region.isEmpty())
-        event.insert("region", m_location.region);
-    if (!m_location.city.isEmpty())
-        event.insert("city", m_location.city);
-    if (!m_location.dma.isEmpty())
-        event.insert("dma", m_location.dma);
-    if (m_location.latitude.isValid()) {
-        event.insert("location_lat", doubleToString(m_location.latitude, 15));
+
+    if (!m_privacyEnabled) {
+        if (!m_device.carrier.isEmpty())
+            event.insert("carrier", m_device.carrier);
+        if (!m_location.country.isEmpty())
+            event.insert("country", m_location.country);
+        if (!m_location.region.isEmpty())
+            event.insert("region", m_location.region);
+        if (!m_location.city.isEmpty())
+            event.insert("city", m_location.city);
+        if (!m_location.dma.isEmpty())
+            event.insert("dma", m_location.dma);
+        if (m_location.latitude.isValid())
+            event.insert("location_lat", doubleToString(m_location.latitude, 15));
+        if (m_location.longitude.isValid())
+            event.insert("location_lng", doubleToString(m_location.longitude, 15));
+        if (!m_location.ip.isEmpty())
+            event.insert("ip", m_location.ip);
+        if (!m_language.isEmpty())
+            event.insert("language", m_language);
     }
-    if (m_location.longitude.isValid()) {
-        event.insert("location_lng", doubleToString(m_location.longitude, 15));
-    }
-    if (!m_location.ip.isEmpty())
-        event.insert("ip", m_location.ip);
-    if (!m_language.isEmpty())
-        event.insert("language", m_language);
+
     if (revenue.isValid()) {
         event.insert("revenue", doubleToString(revenue, 2));
     }
