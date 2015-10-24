@@ -62,6 +62,7 @@ QAmplitudeAnalytics::QAmplitudeAnalytics(const QString &apiKey, QSettings *setti
     , m_apiKey(apiKey)
     , m_sessionId(QDateTime::currentDateTimeUtc().toMSecsSinceEpoch())
     , m_lastEventId(0)
+    , m_shouldSend(false)
     , m_settings(settings)
     , m_nam(new QNetworkAccessManager(this))
     , m_reply(NULL)
@@ -411,15 +412,32 @@ void QAmplitudeAnalytics::trackEvent(const QString &eventType,
         return;
     }
 
+    sendQueuedEvents();
+}
+
+void QAmplitudeAnalytics::sendQueuedEvents()
+{
+    if (m_queue.isEmpty())
+        return;
+
+    if (m_reply || !m_pending.isEmpty()) {
+        // We already have request pending - mark that we
+        // should send again and wait until it finishes
+        m_shouldSend = true;
+        return;
+    }
+
+    m_shouldSend = false;
+    m_pending = m_queue;
+    m_queue.clear();
+
 #if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
     QUrl query;
 #else
     QUrlQuery query;
 #endif
     query.addQueryItem("api_key", m_apiKey);
-    query.addQueryItem("event", m_queue.join(",").prepend("[").append("]"));
-    m_pending = m_queue;
-    m_queue.clear();
+    query.addQueryItem("event", m_pending.join(",").prepend("[").append("]"));
 
     QNetworkRequest request(QUrl("https://api.amplitude.com/httpapi"));
     request.setSslConfiguration(m_sslConfiguration);
@@ -433,29 +451,36 @@ void QAmplitudeAnalytics::trackEvent(const QString &eventType,
     m_reply = m_nam->post(request, data);
 }
 
+void QAmplitudeAnalytics::clearQueuedEvents()
+{
+    m_shouldSend = false;
+    m_queue.clear();
+}
+
 void QAmplitudeAnalytics::onNetworkReply(QNetworkReply *reply)
 {
     if (reply != m_reply) {
-        // Reply not for the latest request. Ignore it.
+        // Reply not for the current request - ignore it (we
+        // shouldn't have two requests running in parallel)
         reply->deleteLater();
         return;
     }
     m_reply = NULL;
 
-    if (reply->error() == QNetworkReply::OperationCanceledError) {
-        // Operation was canceled by us, ignore this error.
-        reply->deleteLater();
-        return;
-    }
-
     if (reply->error() != QNetworkReply::NoError) {
+        // Sending failed - return pending events back to the queue
         m_pending.append(m_queue);
         m_queue = m_pending;
+        m_pending.clear();
         qWarning() << reply->errorString();
-        return;
     }
+    reply->deleteLater();
 
     saveToSettings();
+
+    if (m_shouldSend) {
+        sendQueuedEvents();
+    }
 }
 
 void QAmplitudeAnalytics::saveToSettings()

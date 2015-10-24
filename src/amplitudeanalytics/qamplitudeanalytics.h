@@ -124,6 +124,9 @@ public slots:
                     const QVariant &revenue = QVariant(),
                     bool postpone = false);
 
+    void sendQueuedEvents();
+    void clearQueuedEvents();
+
 private slots:
     void onNetworkReply(QNetworkReply *reply);
 
@@ -142,6 +145,7 @@ private:
     qint64 m_sessionId;
     quint32 m_lastEventId;
 
+    bool m_shouldSend;
     QStringList m_queue;
     QStringList m_pending;
     QSettings *m_settings;
