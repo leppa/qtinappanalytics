@@ -32,6 +32,7 @@
 #include "mccmncfunctions_p.h"
 
 #include <QFile>
+#include <QDir>
 #include <QDateTime>
 #include <QUuid>
 #include <QSettings>
@@ -40,7 +41,10 @@
 #include <QNetworkReply>
 #include <QSslCertificate>
 
-#if QT_VERSION >= QT_VERSION_CHECK(5, 0, 0)
+#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
+#   include <QDesktopServices>
+#else
+#   include <QStandardPaths>
 #   include <QUrlQuery>
 #endif
 
@@ -57,17 +61,38 @@
 #   include <bb/platform/PlatformInfo>
 #endif
 
-QAmplitudeAnalytics::QAmplitudeAnalytics(const QString &apiKey, QSettings *settings, QObject *parent)
+QAmplitudeAnalytics::QAmplitudeAnalytics(const QString &apiKey,
+                                         const QString &configFilePath,
+                                         QObject *parent)
     : QObject(parent)
     , m_apiKey(apiKey)
     , m_privacyEnabled(false)
     , m_sessionId(QDateTime::currentDateTimeUtc().toMSecsSinceEpoch())
     , m_lastEventId(0)
     , m_shouldSend(false)
-    , m_settings(settings)
-    , m_nam(new QNetworkAccessManager(this))
+    , m_nam(new QNetworkAccessManager())
     , m_reply(NULL)
 {
+    if (configFilePath.isEmpty()) {
+        QString dataPath;
+#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
+        dataPath = QDesktopServices::storageLocation(QDesktopServices::DataLocation);
+#else
+        // Same as AppLocalDataLocation but compatible with Qt < 5.4
+        dataPath = QStandardPaths::writableLocation(QStandardPaths::DataLocation);
+#endif
+        QDir dataDir(dataPath);
+        if (!dataDir.exists())
+            QDir().mkpath(dataPath);
+
+        qDebug() << dataPath << dataDir.filePath("QtInAppAnalytics.ini");
+        m_settings.reset(new QSettings(dataDir.filePath("QtInAppAnalytics.ini"),
+                                       QSettings::IniFormat));
+    } else {
+        m_settings.reset(new QSettings(configFilePath, QSettings::IniFormat));
+    }
+    m_settings->beginGroup("AmplitudeAnalytics");
+
     QFile f;
     f.setFileName(":/qtamplitudeanalytics/certificates/addtrust.ca.pem");
     f.open(QFile::ReadOnly);
@@ -196,12 +221,12 @@ QAmplitudeAnalytics::QAmplitudeAnalytics(const QString &apiKey, QSettings *setti
 #endif
 
     if (m_device.id.isEmpty()) {
-        m_device.id = m_settings->value("Analytics/InstallationId").toString();
+        m_device.id = m_settings->value("InstallationId").toString();
         if (m_device.id.isEmpty()) {
             m_device.id = QUuid::createUuid().toString();
             // Strip curly braces
             m_device.id.remove(0, 1).chop(1);
-            m_settings->setValue("Analytics/InstallationId", m_device.id);
+            m_settings->setValue("InstallationId", m_device.id);
         }
     }
 
@@ -217,14 +242,14 @@ QAmplitudeAnalytics::QAmplitudeAnalytics(const QString &apiKey, QSettings *setti
         }
     }
 
-    int size = m_settings->beginReadArray("Analytics/Amplitude");
+    int size = m_settings->beginReadArray("QueuedEvents");
     for (int i = 0; i < size; ++i) {
         m_settings->setArrayIndex(i);
-        m_queue.append(m_settings->value("event").toString());
+        m_queue.append(m_settings->value("Event").toString());
     }
     m_settings->endArray();
 
-    connect(m_nam, SIGNAL(finished(QNetworkReply*)), this, SLOT(onNetworkReply(QNetworkReply*)));
+    connect(m_nam.data(), SIGNAL(finished(QNetworkReply*)), this, SLOT(onNetworkReply(QNetworkReply*)));
 }
 
 QString QAmplitudeAnalytics::apiKey() const
@@ -347,6 +372,7 @@ QAmplitudeAnalytics::~QAmplitudeAnalytics()
     }
 
     saveToSettings();
+    m_settings->endGroup();
 }
 
 void QAmplitudeAnalytics::trackEvent(const QString &eventType,
@@ -503,13 +529,13 @@ void QAmplitudeAnalytics::onNetworkReply(QNetworkReply *reply)
 void QAmplitudeAnalytics::saveToSettings()
 {
     if (!m_queue.isEmpty()) {
-        m_settings->beginWriteArray("Analytics/Amplitude");
+        m_settings->beginWriteArray("QueuedEvents");
         for (int i = 0; i < m_queue.count(); ++i) {
             m_settings->setArrayIndex(i);
-            m_settings->setValue("event", m_queue.at(i));
+            m_settings->setValue("Event", m_queue.at(i));
         }
         m_settings->endArray();
     } else {
-        m_settings->remove("Analytics/Amplitude");
+        m_settings->remove("QueuedEvents");
     }
 }

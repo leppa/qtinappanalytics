@@ -83,7 +83,9 @@ public:
         QString ip;
     };
 
-    explicit QAmplitudeAnalytics(const QString &apiKey, QSettings *settings, QObject *parent = 0);
+    explicit QAmplitudeAnalytics(const QString &apiKey = QString(),
+                                 const QString &configFilePath = QString(),
+                                 QObject *parent = 0);
 
     QString apiKey() const;
     void setApiKey(const QString &apiKey);
@@ -158,10 +160,10 @@ private:
     bool m_shouldSend;
     QStringList m_queue;
     QStringList m_pending;
-    QSettings *m_settings;
 
     QSslConfiguration m_sslConfiguration;
-    QNetworkAccessManager *m_nam;
+    QScopedPointer<QSettings> m_settings;
+    QScopedPointer<QNetworkAccessManager> m_nam;
     QNetworkReply *m_reply;
 
     void saveToSettings();
