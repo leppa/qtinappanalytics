@@ -389,53 +389,18 @@ void QAmplitudeAnalytics::trackEvent(const QString &eventType,
                                      bool postpone)
 {
     QVariantHash event;
-    if (!m_userId.isEmpty())
-        event.insert("user_id", m_userId);
-    if (!m_device.id.isEmpty())
-        event.insert("device_id", m_device.id);
+    fillCommonProperties(event, userProperties);
     event.insert("event_type", eventType);
     event.insert("time", QDateTime::currentDateTimeUtc().toMSecsSinceEpoch());
     event.insert("event_properties", eventProperties);
 
-    if (!userProperties.isEmpty())
-        event.insert("user_properties", userProperties);
-    else if (!m_userProperties.isEmpty())
-        event.insert("user_properties", m_userProperties);
-
-    if (!m_appVersion.isEmpty())
-        event.insert("app_version", m_appVersion);
-    if (!m_device.os.platform.isEmpty())
-        event.insert("platform", m_device.os.platform);
-    if (!m_device.os.name.isEmpty())
-        event.insert("os_name", m_device.os.name);
-    if (!m_device.os.version.isEmpty())
-        event.insert("os_version", m_device.os.version);
-    if (!m_device.brand.isEmpty())
-        event.insert("device_brand", m_device.brand);
-    if (!m_device.manufacturer.isEmpty())
-        event.insert("device_manufacturer", m_device.manufacturer);
-    if (!m_device.model.isEmpty())
-        event.insert("device_model", m_device.model);
-
     if (!m_privacyEnabled) {
-        if (!m_device.carrier.isEmpty())
-            event.insert("carrier", m_device.carrier);
-        if (!m_location.country.isEmpty())
-            event.insert("country", m_location.country);
-        if (!m_location.region.isEmpty())
-            event.insert("region", m_location.region);
-        if (!m_location.city.isEmpty())
-            event.insert("city", m_location.city);
-        if (!m_location.dma.isEmpty())
-            event.insert("dma", m_location.dma);
         if (m_location.latitude.isValid())
             event.insert("location_lat", doubleToString(m_location.latitude, 15));
         if (m_location.longitude.isValid())
             event.insert("location_lng", doubleToString(m_location.longitude, 15));
         if (!m_location.ip.isEmpty())
             event.insert("ip", m_location.ip);
-        if (!m_language.isEmpty())
-            event.insert("language", m_language);
     }
 
     if (revenue.isValid()) {
@@ -456,6 +421,37 @@ void QAmplitudeAnalytics::trackEvent(const QString &eventType,
     }
 
     sendQueuedEvents();
+}
+
+void QAmplitudeAnalytics::identifyUser(const QVariantMap &userProperties,
+                                       bool paying,
+                                       const QString &startVersion)
+{
+    QVariantHash identification;
+    fillCommonProperties(identification, userProperties);
+
+    identification.insert("paying", paying);
+    if (!startVersion.isEmpty())
+        identification.insert("start_version", startVersion);
+
+#if QT_VERSION < QT_VERSION_CHECK(5, 0, 0)
+    QUrl query;
+#else
+    QUrlQuery query;
+#endif
+    query.addQueryItem("api_key", m_apiKey);
+    query.addQueryItem("identification", toJson(identification));
+
+    QNetworkRequest request(QUrl("https://api.amplitude.com/identify"));
+    request.setSslConfiguration(m_sslConfiguration);
+    request.setHeader(QNetworkRequest::ContentTypeHeader,
+                      "application/x-www-form-urlencoded;charset=UTF-8");
+#if QT_VERSION < QT_VERSION_CHECK(5,0,0)
+    const QByteArray data(query.encodedQuery());
+#else
+    const QByteArray data(query.toString(QUrl::FullyEncoded).toUtf8());
+#endif
+    m_nam->post(request, data);
 }
 
 void QAmplitudeAnalytics::sendQueuedEvents()
@@ -523,6 +519,50 @@ void QAmplitudeAnalytics::onNetworkReply(QNetworkReply *reply)
 
     if (m_shouldSend) {
         sendQueuedEvents();
+    }
+}
+
+void QAmplitudeAnalytics::fillCommonProperties(QVariantHash &hashMap,
+                                               const QVariantMap &userProperties) const
+{
+    if (!m_userId.isEmpty())
+        hashMap.insert("user_id", m_userId);
+    if (!m_device.id.isEmpty())
+        hashMap.insert("device_id", m_device.id);
+
+    if (!userProperties.isEmpty())
+        hashMap.insert("user_properties", userProperties);
+    else if (!m_userProperties.isEmpty())
+        hashMap.insert("user_properties", m_userProperties);
+
+    if (!m_appVersion.isEmpty())
+        hashMap.insert("app_version", m_appVersion);
+    if (!m_device.os.platform.isEmpty())
+        hashMap.insert("platform", m_device.os.platform);
+    if (!m_device.os.name.isEmpty())
+        hashMap.insert("os_name", m_device.os.name);
+    if (!m_device.os.version.isEmpty())
+        hashMap.insert("os_version", m_device.os.version);
+    if (!m_device.brand.isEmpty())
+        hashMap.insert("device_brand", m_device.brand);
+    if (!m_device.manufacturer.isEmpty())
+        hashMap.insert("device_manufacturer", m_device.manufacturer);
+    if (!m_device.model.isEmpty())
+        hashMap.insert("device_model", m_device.model);
+
+    if (!m_privacyEnabled) {
+        if (!m_device.carrier.isEmpty())
+            hashMap.insert("carrier", m_device.carrier);
+        if (!m_location.country.isEmpty())
+            hashMap.insert("country", m_location.country);
+        if (!m_location.region.isEmpty())
+            hashMap.insert("region", m_location.region);
+        if (!m_location.city.isEmpty())
+            hashMap.insert("city", m_location.city);
+        if (!m_location.dma.isEmpty())
+            hashMap.insert("dma", m_location.dma);
+        if (!m_language.isEmpty())
+            hashMap.insert("language", m_language);
     }
 }
 

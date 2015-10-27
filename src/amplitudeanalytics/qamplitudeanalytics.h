@@ -134,6 +134,10 @@ public slots:
                     const QVariant &revenue = QVariant(),
                     bool postpone = false);
 
+    void identifyUser(const QVariantMap &userProperties = QVariantMap(),
+                      bool paying = false,
+                      const QString &startVersion = QString());
+
     void sendQueuedEvents();
     void clearQueuedEvents();
 
@@ -166,6 +170,7 @@ private:
     QScopedPointer<QNetworkAccessManager> m_nam;
     QNetworkReply *m_reply;
 
+    void fillCommonProperties(QVariantHash &hashMap, const QVariantMap &userProperties) const;
     void saveToSettings();
 };
 
