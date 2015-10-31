@@ -32,6 +32,7 @@
 #include <QLocale>
 #include <QDate>
 #include <QVariant>
+#include <QRegExp>
 
 inline QString toJsonString(const QVariant &value);
 
@@ -45,6 +46,13 @@ inline void capitalize(QString &str)
 
 inline QString quoteAndEscape(const QString &string)
 {
+    static QRegExp rx(QLatin1String("^[+\\-]?[0-9]+(\\.[0-9]+)?$"));
+    if (rx.exactMatch(string)) {
+        // Seems to be a (floating point) number: doesn't need
+        // to be quoted, nothing to escape - return as-is.
+        return string;
+    }
+
     QString result(string);
     // JSON requires \, ", \b, \f, \n, \r, \t to be escaped
     result.replace(QLatin1Char('\\'), QLatin1String("\\\\"));

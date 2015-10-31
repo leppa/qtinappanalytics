@@ -125,7 +125,7 @@ signals:
 
 public slots:
     void trackEvent(const QString &eventType,
-                    const QVariantMap &eventProperties,
+                    const QVariantMap &eventProperties = QVariantMap(),
                     bool postpone = false);
 
     void trackEvent(const QString &eventType,
@@ -135,7 +135,7 @@ public slots:
                     bool postpone = false);
 
     void identifyUser(const QVariantMap &userProperties = QVariantMap(),
-                      bool paying = false,
+                      const QVariant paying = QVariant(),
                       const QString &startVersion = QString());
 
     void sendQueuedEvents();

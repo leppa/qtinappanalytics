@@ -415,7 +415,7 @@ void QAmplitudeAnalytics::trackEvent(const QString &eventType,
     m_queue.append(toJson(event));
     saveToSettings();
 
-    if (m_reply || postpone) {
+    if (postpone) {
         return;
     }
 
@@ -423,13 +423,14 @@ void QAmplitudeAnalytics::trackEvent(const QString &eventType,
 }
 
 void QAmplitudeAnalytics::identifyUser(const QVariantMap &userProperties,
-                                       bool paying,
+                                       const QVariant paying,
                                        const QString &startVersion)
 {
     QVariantHash identification;
     fillCommonProperties(identification, userProperties);
 
-    identification.insert(QLatin1String("paying"), paying);
+    if (paying.isValid())
+        identification.insert(QLatin1String("paying"), paying);
     if (!startVersion.isEmpty())
         identification.insert(QLatin1String("start_version"), startVersion);
 

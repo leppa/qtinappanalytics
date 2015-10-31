@@ -28,6 +28,8 @@
 #
 ##################################################################################
 
+QT += network
+
 contains(QT, systeminfo) {
     DEFINES += QAMPLITUDEANALYTICS_USE_QTSYSTEMINFO
 } else {
