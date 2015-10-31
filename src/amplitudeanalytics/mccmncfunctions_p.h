@@ -37,13 +37,13 @@ inline QString findCountryByIso3166(const QString &iso)
         return QString();
 
     QFile f;
-    f.setFileName(":/qtamplitudeanalytics/csv/iso3166-country-codes.csv");
+    f.setFileName(QLatin1String(":/qtamplitudeanalytics/csv/iso3166-country-codes.csv"));
     if (!f.open(QFile::Text | QFile::ReadOnly))
         return QString();
 
     const QString cc = iso.toUpper();
     while (!f.atEnd()) {
-        QStringList row = QString::fromUtf8(f.readLine()).split(',');
+        QStringList row = QString::fromUtf8(f.readLine()).split(QLatin1Char(','));
         if (row.at(0) == cc)
             return row.at(1).trimmed();
     }
@@ -57,12 +57,12 @@ inline QString findCountryByMcc(const QString &mcc)
         return QString();
 
     QFile f;
-    f.setFileName(":/qtamplitudeanalytics/csv/mcc-mnc-codes.csv");
+    f.setFileName(QLatin1String(":/qtamplitudeanalytics/csv/mcc-mnc-codes.csv"));
     if (!f.open(QFile::Text | QFile::ReadOnly))
         return QString();
 
     while (!f.atEnd()) {
-        QStringList row = QString::fromLatin1(f.readLine()).split(',');
+        QStringList row = QString::fromLatin1(f.readLine()).split(QLatin1Char(','));
         if (row.at(0) == mcc) {
             return row.at(5).trimmed();
         }
@@ -77,11 +77,11 @@ inline QString findCarrierByMccMnc(const QString &mcc, const QString &mnc)
         return QString();
 
     QFile f;
-    f.setFileName("://mcc-mnc-codes.csv");
+    f.setFileName(QLatin1String("://mcc-mnc-codes.csv"));
     if (!f.open(QFile::Text | QFile::ReadOnly))
         return QString();
     while (!f.atEnd()) {
-        QStringList row = QString::fromLatin1(f.readLine()).split(',');
+        QStringList row = QString::fromLatin1(f.readLine()).split(QLatin1Char(','));
         if (row.at(0) == mcc && row.at(2) == mnc) {
             return row.at(7).trimmed();
         }

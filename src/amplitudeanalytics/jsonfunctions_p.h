@@ -47,30 +47,32 @@ inline QString quoteAndEscape(const QString &string)
 {
     QString result(string);
     // JSON requires \, ", \b, \f, \n, \r, \t to be escaped
-    result.replace('\\', "\\\\");
-    result.replace('"', "\\\"");
-    result.replace('\b', "\\b");
-    result.replace('\f', "\\f");
-    result.replace('\n', "\\n");
-    result.replace('\r', "\\r");
-    result.replace('\t', "\\t");
-    return result.prepend("\"").append("\"");
+    result.replace(QLatin1Char('\\'), QLatin1String("\\\\"));
+    result.replace(QLatin1Char('"'), QLatin1String("\\\""));
+    result.replace(QLatin1Char('\b'), QLatin1String("\\b"));
+    result.replace(QLatin1Char('\f'), QLatin1String("\\f"));
+    result.replace(QLatin1Char('\n'), QLatin1String("\\n"));
+    result.replace(QLatin1Char('\r'), QLatin1String("\\r"));
+    result.replace(QLatin1Char('\t'), QLatin1String("\\t"));
+    return result.prepend(QLatin1Char('"')).append(QLatin1Char('"'));
 }
 
 inline QString toJson(const QVariantHash &hash)
 {
     QStringList json;
     for (QVariantHash::const_iterator i = hash.constBegin(); i != hash.constEnd(); ++i)
-        json.append(QString("%1:%2").arg(quoteAndEscape(i.key()), toJsonString(i.value())));
-    return json.join(",").prepend("{").append("}");
+        json.append(quoteAndEscape(i.key()).append(QLatin1Char(':'))
+                                           .append(toJsonString(i.value())));
+    return json.join(QLatin1String(",")).prepend(QLatin1Char('{')).append(QLatin1Char('}'));
 }
 
 inline QString toJson(const QVariantMap &map)
 {
     QStringList json;
     for (QVariantMap::const_iterator i = map.constBegin(); i != map.constEnd(); ++i)
-        json.append(QString("%1:%2").arg(quoteAndEscape(i.key()), toJsonString(i.value())));
-    return json.join(",").prepend("{").append("}");
+        json.append(quoteAndEscape(i.key()).append(QLatin1Char(':'))
+                                           .append(toJsonString(i.value())));
+    return json.join(QLatin1String(",")).prepend(QLatin1Char('{')).append(QLatin1Char('}'));
 }
 
 inline QString toJsonString(const QVariant &value)
@@ -93,7 +95,8 @@ inline QString toJsonString(const QVariant &value)
         return quoteAndEscape(value.toTime().toString(Qt::ISODate));
     case QVariant::DateTime:
         // Not using Qt::ISODate because we also want to save microseconds
-        return quoteAndEscape(value.toDateTime().toUTC().toString("yyyy-MM-ddTHH:mm:ss.zzzZ"));
+        return quoteAndEscape(value.toDateTime().toUTC().toString(
+                                  QLatin1String("yyyy-MM-ddTHH:mm:ss.zzzZ")));
     case QVariant::Locale:
         return quoteAndEscape(QLocale::languageToString(value.toLocale().language()));
     case QVariant::Map:
@@ -106,7 +109,7 @@ inline QString toJsonString(const QVariant &value)
         foreach (const QVariant &item, value.toList()) {
             values.append(toJsonString(item));
         }
-        return values.join(",").prepend("[").append("]");
+        return values.join(QLatin1String(",")).prepend(QLatin1Char('[')).append(QLatin1Char(']'));
     }
     case QVariant::StringList:
     {
@@ -114,7 +117,7 @@ inline QString toJsonString(const QVariant &value)
         foreach (const QVariant &item, value.toStringList()) {
             values.append(toJsonString(item));
         }
-        return values.join(",").prepend("[").append("]");
+        return values.join(QLatin1String(",")).prepend(QLatin1Char('[')).append(QLatin1Char(']'));
     }
     default:
         // unsupported type -> return empty string
@@ -134,9 +137,9 @@ inline QString doubleToString(const QVariant &value, int precision)
     case QVariant::Double:
         return QString::number(value.toDouble(), 'g', precision);
     default:
-        // Not a number: ignore
+        // Not a number: return 0
         qWarning() << value << "is not a number.";
-        return "0";
+        return QLatin1String("0");
     }
 }
 
