@@ -46,6 +46,9 @@ inline void capitalize(QString &str)
 
 inline QString quoteAndEscape(const QString &string)
 {
+    if (string.isEmpty())
+        return QLatin1String("\"\"");
+
     static QRegExp rx(QLatin1String("^[+\\-]?[0-9]+(\\.[0-9]+)?$"));
     if (rx.exactMatch(string)) {
         // Seems to be a (floating point) number: doesn't need
@@ -128,10 +131,11 @@ inline QString toJsonString(const QVariant &value)
         return values.join(QLatin1String(",")).prepend(QLatin1Char('[')).append(QLatin1Char(']'));
     }
     default:
-        // unsupported type -> return empty string
-        return QString();
+        if (value.type() != QVariant::Invalid)
+            qWarning() << value << "has unsupported type:" << value.typeName();
+        // Unsupported type -> return null
+        return QLatin1String("null");
     }
-    return QString();
 }
 
 inline QString doubleToString(const QVariant &value, int precision)
