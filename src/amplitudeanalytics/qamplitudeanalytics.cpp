@@ -512,9 +512,9 @@ void QAmplitudeAnalytics::onNetworkReply(QNetworkReply *reply)
         // Sending failed - return pending events back to the queue
         m_pending.append(m_queue);
         m_queue = m_pending;
-        m_pending.clear();
         qWarning() << reply->errorString();
     }
+    m_pending.clear();
     reply->deleteLater();
 
     saveToSettings();
