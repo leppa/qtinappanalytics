@@ -48,6 +48,8 @@
 #   include <QUrlQuery>
 #endif
 
+#include <qplatformdefs.h>
+
 #ifdef QAMPLITUDEANALYTICS_USE_QTSYSTEMINFO
 #   include <QDeviceInfo>
 #   include <QNetworkInfo>
