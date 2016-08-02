@@ -58,6 +58,7 @@
 #   include <QSystemDeviceInfo>
 #   include <QSystemNetworkInfo>
 #elif defined(Q_OS_BLACKBERRY)
+#   include <bbndk.h>
 #   include <bb/device/CellularNetworkInfo>
 #   include <bb/device/HardwareInfo>
 #   include <bb/platform/PlatformInfo>
@@ -212,9 +213,12 @@ QAmplitudeAnalytics::QAmplitudeAnalytics(const QString &apiKey,
         m_device.model = hwi.deviceName();
 
     bb::device::CellularNetworkInfo cni;
+#if defined(BBNDK_VERSION_AT_LEAST) && BBNDK_VERSION_AT_LEAST(10,3,0)
     if (!cni.displayName().isEmpty())
         m_device.carrier = cni.displayName();
-    else if (!cni.name().isEmpty())
+    else
+#endif
+    if (!cni.name().isEmpty())
         m_device.carrier = cni.name();
     else
         m_device.carrier = findCarrierByMccMnc(cni.mobileCountryCode(), cni.mobileNetworkCode());
