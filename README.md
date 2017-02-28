@@ -1,7 +1,7 @@
 Qt In-App Analytics
 ===================
 
-Copyright (C) 2015 *[Oleksii Serdiuk](https://oleksii.name/)*.
+Copyright (C) 2015-2017 *[Oleksii Serdiuk](https://oleksii.name/)*.
 
 
 About

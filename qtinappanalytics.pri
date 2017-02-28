@@ -2,7 +2,7 @@
 #
 #  Qt In-App Analytics
 #
-#  Copyright (c) 2015, Oleksii Serdiuk <contacts[at]oleksii[dot]name>
+#  Copyright (c) 2015-2017, Oleksii Serdiuk <contacts[at]oleksii[dot]name>
 #  All rights reserved.
 #
 #  Redistribution and use in source and binary forms, with or without
