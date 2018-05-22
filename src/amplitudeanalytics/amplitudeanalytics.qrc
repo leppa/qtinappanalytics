@@ -1,6 +1,7 @@
 <RCC>
     <qresource prefix="/qtamplitudeanalytics">
         <file>certificates/addtrust.ca.pem</file>
+        <file>certificates/comodo.ca.pem</file>
         <file>csv/iso3166-country-codes.csv</file>
         <file>csv/mcc-mnc-codes.csv</file>
     </qresource>

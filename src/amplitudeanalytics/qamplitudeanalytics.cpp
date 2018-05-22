@@ -95,15 +95,13 @@ QAmplitudeAnalytics::QAmplitudeAnalytics(const QString &apiKey,
     }
     m_settings->beginGroup(QLatin1String("AmplitudeAnalytics"));
 
-    QFile f;
-    f.setFileName(QLatin1String(":/qtamplitudeanalytics/certificates/addtrust.ca.pem"));
-    f.open(QFile::ReadOnly);
-    QSslCertificate cert(f.readAll());
-    f.close();
-
     m_sslConfiguration = QSslConfiguration::defaultConfiguration();
     QList<QSslCertificate> cacerts = m_sslConfiguration.caCertificates();
-    cacerts.append(cert);
+    cacerts.append(QList<QSslCertificate>()
+                   << QSslCertificate::fromPath(
+                          QLatin1String(":/qtamplitudeanalytics/certificates/addtrust.ca.pem"))
+                   << QSslCertificate::fromPath(
+                          QLatin1String(":/qtamplitudeanalytics/certificates/comodo.ca.pem")));
     m_sslConfiguration.setCaCertificates(cacerts);
 #if QT_VERSION < QT_VERSION_CHECK(4,8,0)
     // More and more servers are disabling SSLv3 due to vulnerabilities,
