@@ -1,3 +1,5 @@
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fleppa%2Fqtinappanalytics.svg?type=shield)](https://app.fossa.com/projects/git%2Bgithub.com%2Fleppa%2Fqtinappanalytics?ref=badge_shield)
+
 Qt In-App Analytics
 ===================
 
@@ -31,3 +33,7 @@ License
 
 
 [Amplitude Analytics]: https://amplitude.com/
+
+
+## License
+[![FOSSA Status](https://app.fossa.com/api/projects/git%2Bgithub.com%2Fleppa%2Fqtinappanalytics.svg?type=large)](https://app.fossa.com/projects/git%2Bgithub.com%2Fleppa%2Fqtinappanalytics?ref=badge_large)
